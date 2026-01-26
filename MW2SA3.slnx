@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="MW2SA3/MW2SA3.vcxproj" Id="4a060fae-8144-436b-a080-abc9dc23256e" />
+</Solution>
