@@ -9,10 +9,13 @@
 #include <algorithm>
 #include <windows.h>
 #include <winhttp.h>
+#include <mutex>
 
 #pragma comment(lib, "winhttp.lib")
 
 using namespace std::chrono_literals;
+
+std::mutex party_players_mutex {};
 
 party_t  party;
 player_t players[MAX_PLAYER_COUNT];
@@ -195,6 +198,7 @@ uint32_t get_external_packed_ip_address() {
 void update_player_statuses() {
     while (true) {
         std::this_thread::sleep_for(1000ms);
+        std::lock_guard<std::mutex> read_lock(party_players_mutex);
 
         system("cls");
         if (0 == party.m_max_player_count) {
@@ -290,6 +294,8 @@ void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const u_c
 }
 
 void handle_vt_packet(const ipv4_header_t * ip_header, packet_parser & packet_parser) {
+    std::lock_guard<std::mutex> scope_lock(party_players_mutex);
+
     uint64_t received_timestamp = epoch_timestamp_milliseconds();
     packet_parser.read_uint8();
     uint64_t steam64_id = packet_parser.read_uint64();
@@ -306,6 +312,8 @@ void handle_vt_packet(const ipv4_header_t * ip_header, packet_parser & packet_pa
 }
 
 void handle_playerstate_packet(packet_parser & packet_parser) {
+    std::lock_guard<std::mutex> scope_lock(party_players_mutex);
+
     uint64_t received_timestamp = epoch_timestamp_milliseconds();
     uint32_t update_tick = packet_parser.read_uint32();
     uint8_t  update_type = packet_parser.read_uint8();
