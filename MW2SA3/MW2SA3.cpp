@@ -10,15 +10,17 @@
 #include <windows.h>
 #include <winhttp.h>
 #include <mutex>
+#include <unordered_map>
 
 #pragma comment(lib, "winhttp.lib")
 
 using namespace std::chrono_literals;
 
-std::mutex party_players_mutex {};
+std::mutex party_players_mutex;
 
-party_t  party;
-player_t players[MAX_PLAYER_COUNT];
+party_t                                     party;
+player_wrapper_t                            players[MAX_PLAYER_COUNT];
+std::unordered_map<uint64_t, player_data_t> player_data;
 
 uint32_t packed_internal_ip_address;
 uint32_t packed_external_ip_address;
@@ -210,18 +212,20 @@ void update_player_statuses() {
         uint64_t timestamp = epoch_timestamp_milliseconds();
         uint64_t latest_last_seen = timestamp - PLAYER_TIMEOUT_MILLISECONDS;
 
-        for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
-            player_t& player = players[i];
-            if (false == player.m_included) {
+        for (size_t i = 0; i < MAX_PLAYER_COUNT; i++) {
+            player_wrapper_t player_wrapper = players[i];
+            if (false == player_wrapper.m_included) {
                 continue;
             }
 
+            player_data_t& player = player_data[player_wrapper.m_steam64_id];
             if (party.m_our_index != i && player.m_last_seen < latest_last_seen) {
-                player.m_included = false;
+                player_wrapper.m_included = false;
+                player_data.erase(player_wrapper.m_steam64_id);
                 continue;
             }
 
-            std::cout << i << ") " << player.m_username << " " << player.m_ip_address.serialise_readable() << " " << (PLAYER_TIMEOUT_MILLISECONDS - (timestamp - player.m_last_seen)) << " " << player.m_vt << " " << player.m_steam64_id;
+            std::cout << std::format("{:02d}) {:s} {:s} {:d} {:b} {:d}", i + 1, player.m_username, player.m_ip_address.serialise_readable(), PLAYER_TIMEOUT_MILLISECONDS - (timestamp - player.m_last_seen), player.m_ip_from_vt, player.m_steam64_id);
             if (party.m_host_index == i) {
                 std::cout << " [HOST]";
             }
@@ -278,15 +282,17 @@ void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const u_c
     // unsure if this has unintended side effects
     if (true == is_outgoing) {
         uint32_t packed_destination = ip_header->destination().packed_int32();
+        uint64_t received_timestamp = epoch_timestamp_milliseconds();
 
         for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
-            player_t& player = players[i];
-            if (false == player.m_included) {
+            player_wrapper_t player_wrapper = players[i];
+            if (false == player_wrapper.m_included) {
                 continue;
             }
 
+            player_data_t & player = player_data[player_wrapper.m_steam64_id];
             if (player.m_ip_address.packed_int32() == packed_destination) {
-                player.m_last_seen = epoch_timestamp_milliseconds();
+                player.m_last_seen = received_timestamp;
                 break;
             }
         }
@@ -300,15 +306,13 @@ void handle_vt_packet(const ipv4_header_t * ip_header, packet_parser & packet_pa
     packet_parser.read_uint8();
     uint64_t steam64_id = packet_parser.read_uint64();
 
-    player_t * player;
-    add_or_update_player(steam64_id, &player);
+    player_data_t & _player_data = player_data[steam64_id];
 
-    if (nullptr != player) {
-        player->m_included = true;
-        player->m_ip_address = ip_header->source();
-        player->m_vt = true;
-        player->m_last_seen = received_timestamp;
-    }
+    _player_data.m_ip_address = ip_header->source();
+    _player_data.m_ip_from_vt = true;
+    _player_data.m_last_seen = received_timestamp;
+
+    update_player_roles();
 }
 
 void handle_playerstate_packet(packet_parser & packet_parser) {
@@ -321,7 +325,7 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
 
     party.m_player_count = player_count;
 
-    // If the least significant bit is set, party information is stored as well as players
+    // If the least significant bit is not set, party information is stored as well as players
     if (0 == (update_type & 1)) {
         packet_parser.skip_bytes(8);
         packet_parser.read_uint32();
@@ -351,9 +355,10 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
 
     while (true == packet_parser.has_remaining_data(42)) {
         // sanity check
-        uint8_t player_index = packet_parser.read_uint8();
-        if (player_index >= MAX_PLAYER_COUNT) {
-            continue;
+        uint8_t index = packet_parser.read_uint8();
+        if (index >= MAX_PLAYER_COUNT) {
+            // if we get here something has gone seriously wrong, abort reading
+            break;
         }
 
         bool not_included = packet_parser.read_bit();
@@ -366,13 +371,13 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         bool invited = packet_parser.read_bit();
         bool headset_present = packet_parser.read_bit();
         uint32_t voice_connectivity = packet_parser.read_bits_as_uint32(18);
-        std::string player_username = packet_parser.read_string();
+        std::string username = packet_parser.read_string();
         packet_parser.skip_bytes(4);
-        uint64_t player_steam64_id = packet_parser.read_uint64();
-        ipv4_address_t player_internal_ip = packet_parser.read_ipv4_address();
-        ipv4_address_t player_external_ip = packet_parser.read_ipv4_address();
-        uint16_t player_internal_port = packet_parser.read_uint16();
-        uint16_t player_external_port = packet_parser.read_uint16();
+        uint64_t steam64_id = packet_parser.read_uint64();
+        ipv4_address_t internal_ip = packet_parser.read_ipv4_address();
+        ipv4_address_t external_ip = packet_parser.read_ipv4_address();
+        uint16_t internal_port = packet_parser.read_uint16();
+        uint16_t external_port = packet_parser.read_uint16();
         packet_parser.skip_bytes(24);
         uint64_t challenge = packet_parser.read_uint64();
         uint8_t sub_party_index = packet_parser.read_bits_as_uint8(5);
@@ -387,28 +392,30 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         uint16_t nameplate = packet_parser.read_bits_as_uint8(6);
         uint8_t map_packs = packet_parser.read_bits_as_uint8(5);
 
-        player_t * player;
-        add_or_update_player(player_steam64_id, &player);
+        player_data_t& _player_data = player_data[steam64_id];
 
-        if (nullptr != player) {
-            // If this player was added by this partystate, there has been no vt packet (yet, atleast) we'll use the IP address from partystate data even though it could be spoofed
-            if (false == player->m_included) {
-                player->m_ip_address = player_external_ip;
-                player->m_included = true;
-            }
-
-            player->m_index = player_index;
-            player->m_username.assign(player_username);
-            player->m_last_seen = received_timestamp;
+        if (false == _player_data.m_ip_from_vt) {
+            _player_data.m_ip_address = external_ip;
         }
+
+        _player_data.m_username.swap(username);
+        _player_data.m_last_seen = received_timestamp;
+
+        players[index].m_included = true;
+        players[index].m_steam64_id = steam64_id;
     }
 
-    for (int i = 0; i < min(MAX_PLAYER_COUNT, party.m_player_count); i++) {
-        player_t& player = players[i];
-        if (false == player.m_included) {
+    update_player_roles();
+}
+
+void update_player_roles() {
+    for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
+        player_wrapper_t player_wrapper = players[i];
+        if (false == player_wrapper.m_included) {
             continue;
         }
 
+        player_data_t player = player_data[player_wrapper.m_steam64_id];
         if (player.m_ip_address.packed_int32() == party.m_host_ip_address.packed_int32()) {
             party.m_host_index = i;
         }
@@ -417,33 +424,4 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
             party.m_our_index = i;
         }
     }
-}
-
-void add_or_update_player(uint64_t steam64_id, player_t ** player) {
-    bool found_existing_player    = false;
-    int  first_not_included_index = -1;
-
-    for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
-        player_t * _player = players + i;
-
-        if (false == _player->m_included || steam64_id != _player->m_steam64_id) {
-            if (false == _player->m_included && -1 == first_not_included_index) {
-                first_not_included_index = i;
-            }
-
-            continue;
-        }
-
-        *player = _player;
-        found_existing_player = true;
-        break;
-    }
-
-    if (true == found_existing_player) {
-        return;
-    }
-
-    players[first_not_included_index] = player_t();
-    players[first_not_included_index].m_steam64_id = steam64_id;
-    *player = players + first_not_included_index;
 }
