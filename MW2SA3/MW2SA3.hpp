@@ -11,10 +11,10 @@
 #include <tchar.h>
 
 // The maximum lobby size is 18 in MW2, we're safe to set that same constraint
-const int MAX_PLAYER_COUNT = 18;
+constexpr int MAX_PLAYER_COUNT = 18;
 
 // This timeout seems much too long, it's unclear how the game keeps track of when a player leaves
-const int PLAYER_TIMEOUT_MILLISECONDS = 720000;
+constexpr int PLAYER_TIMEOUT_MILLISECONDS = 720000;
 
 struct party_t {
 	uint8_t        m_max_player_count;
