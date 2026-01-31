@@ -1,13 +1,9 @@
 #include "MW2SA3.hpp"
+
 #include "infpod.hpp"
 
-#include <memory>
-#include <span>
 #include <chrono>
 #include <thread>
-#include <conio.h>
-#include <algorithm>
-#include <windows.h>
 #include <winhttp.h>
 #include <mutex>
 #include <unordered_map>
