@@ -87,7 +87,7 @@ int main() {
     pcap_freealldevs(all_devices);
 
     bpf_program filter;
-    pcap_compile(device_handle, &filter, "ip and udp", 1, 0);
+    pcap_compile(device_handle, &filter, "ip and udp and udp.port == 28960", 1, 0);
     pcap_setfilter(device_handle, &filter);
 
     if (nullptr == device_handle) {
@@ -252,10 +252,6 @@ void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const u_c
 
     const udp_header_t * udp_header = reinterpret_cast<const udp_header_t *>(cursor);
     cursor += sizeof(udp_header_t);
-
-    if (28960 != udp_header->source() && 28960 != udp_header->destination()) {
-        return;
-    }
 
     const size_t network_header_bytes = sizeof(ethernet_header_t) + ip_header->header_length_bytes() + sizeof(udp_header_t);
     const size_t remaining_bytes = ip_header->total_length() - network_header_bytes;
