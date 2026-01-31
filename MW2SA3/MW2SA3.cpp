@@ -207,7 +207,7 @@ void update_player_statuses() {
             continue;
         }
 
-        std::cout << "Host IP: " << party.m_host_ip_address.serialise_readable() << std::endl << std::endl;
+        std::cout << "Host IP: " << party.m_host_ip_address.to_string() << std::endl << std::endl;
 
         uint64_t timestamp = epoch_timestamp_milliseconds();
         uint64_t latest_last_seen = timestamp - PLAYER_TIMEOUT_MILLISECONDS;
@@ -225,7 +225,7 @@ void update_player_statuses() {
                 continue;
             }
 
-            std::cout << std::format("{:02d}) {:s} {:s} {:d} {:b} {:d}", i + 1, player.m_username, player.m_ip_address.serialise_readable(), PLAYER_TIMEOUT_MILLISECONDS - (timestamp - player.m_last_seen), player.m_ip_from_vt, player.m_steam64_id);
+            std::cout << std::format("{:02d}) {:s} {:s} {:d} {:b} {:d}", i + 1, player.m_username, player.m_ip_address.to_string(), PLAYER_TIMEOUT_MILLISECONDS - (timestamp - player.m_last_seen), player.m_ip_from_vt, player.m_steam64_id);
             if (party.m_host_index == i) {
                 std::cout << " [HOST]";
             }
@@ -261,7 +261,7 @@ void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const u_c
     const size_t remaining_bytes = ip_header->total_length() - network_header_bytes;
     packet_parser packet_parser(reinterpret_cast<const uint8_t *>(data + network_header_bytes), remaining_bytes);
 
-    bool is_outgoing = ip_header->source().packed_int32() == packed_internal_ip_address;
+    bool is_outgoing = ip_header->m_source.m_packed_data == packed_internal_ip_address;
 
     uint32_t oob_check = packet_parser.read_uint32();
     if (0xFFFFFFFF == oob_check) {
@@ -281,7 +281,7 @@ void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const u_c
     // for all other types, we only care if the packet is outgoing as we can trust our client
     // unsure if this has unintended side effects
     if (true == is_outgoing) {
-        uint32_t packed_destination = ip_header->destination().packed_int32();
+        uint32_t packed_destination = ip_header->m_destiniation.m_packed_data;
         uint64_t received_timestamp = epoch_timestamp_milliseconds();
 
         for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
@@ -291,7 +291,7 @@ void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const u_c
             }
 
             player_data_t & player = player_data[player_wrapper.m_steam64_id];
-            if (player.m_ip_address.packed_int32() == packed_destination) {
+            if (player.m_ip_address.m_packed_data == packed_destination) {
                 player.m_last_seen = received_timestamp;
                 break;
             }
@@ -308,7 +308,7 @@ void handle_vt_packet(const ipv4_header_t * ip_header, packet_parser & packet_pa
 
     player_data_t & _player_data = player_data[steam64_id];
 
-    _player_data.m_ip_address = ip_header->source();
+    _player_data.m_ip_address = ip_header->m_source;
     _player_data.m_ip_from_vt = true;
     _player_data.m_last_seen = received_timestamp;
 
@@ -416,11 +416,11 @@ void update_player_roles() {
         }
 
         player_data_t player = player_data[player_wrapper.m_steam64_id];
-        if (player.m_ip_address.packed_int32() == party.m_host_ip_address.packed_int32()) {
+        if (player.m_ip_address.m_packed_data == party.m_host_ip_address.m_packed_data) {
             party.m_host_index = i;
         }
 
-        if (player.m_ip_address.packed_int32() == packed_external_ip_address) {
+        if (player.m_ip_address.m_packed_data == packed_external_ip_address) {
             party.m_our_index = i;
         }
     }
