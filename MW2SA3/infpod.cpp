@@ -4,7 +4,7 @@
 #include <winsock2.h>
 
 std::string ipv4_address_t::to_string() const {
-	return std::format("ipv4_address_t ( {:d}.{:d}.{:d}.{:d} )", this->m_data[0], this->m_data[1], this->m_data[2], this->m_data[3]);
+	return std::format("{:d}.{:d}.{:d}.{:d}", this->m_data[0], this->m_data[1], this->m_data[2], this->m_data[3]);
 }
 
 uint8_t ipv4_header_t::header_length_bytes() const {

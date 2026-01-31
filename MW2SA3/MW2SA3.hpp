@@ -42,6 +42,7 @@ std::regex vt_regex("^vt$");
 
 uint32_t get_external_packed_ip_address();
 
+void redraw_players();
 void update_player_roles();
 void update_player_statuses();
 void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const u_char * data);

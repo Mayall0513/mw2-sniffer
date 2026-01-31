@@ -197,16 +197,13 @@ void update_player_statuses() {
     while (true) {
         std::this_thread::sleep_for(1000ms);
         std::lock_guard<std::mutex> read_lock(party_players_mutex);
-
-        system("cls");
         if (0 == party.m_max_player_count) {
             continue;
         }
 
-        std::cout << "Host IP: " << party.m_host_ip_address.to_string() << std::endl << std::endl;
-
         uint64_t timestamp = epoch_timestamp_milliseconds();
         uint64_t latest_last_seen = timestamp - PLAYER_TIMEOUT_MILLISECONDS;
+        bool     any_removed = false;
 
         for (size_t i = 0; i < MAX_PLAYER_COUNT; i++) {
             player_wrapper_t player_wrapper = players[i];
@@ -218,19 +215,12 @@ void update_player_statuses() {
             if (party.m_our_index != i && player.m_last_seen < latest_last_seen) {
                 player_wrapper.m_included = false;
                 player_data.erase(player_wrapper.m_steam64_id);
-                continue;
+                any_removed = true;
             }
+        }
 
-            std::cout << std::format("{:02d}) {:s} {:s} {:d} {:b} {:d}", i + 1, player.m_username, player.m_ip_address.to_string(), PLAYER_TIMEOUT_MILLISECONDS - (timestamp - player.m_last_seen), player.m_ip_from_vt, player.m_steam64_id);
-            if (party.m_host_index == i) {
-                std::cout << " [HOST]";
-            }
-
-            if (party.m_our_index == i) {
-                std::cout << " [US]";
-            }
-
-            std::cout << std::endl;
+        if (true == any_removed) {
+            redraw_players();
         }
     }
 }
@@ -305,6 +295,7 @@ void handle_vt_packet(const ipv4_header_t * ip_header, packet_parser & packet_pa
     _player_data.m_last_seen = received_timestamp;
 
     update_player_roles();
+    redraw_players();
 }
 
 void handle_playerstate_packet(packet_parser & packet_parser) {
@@ -398,6 +389,44 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
     }
 
     update_player_roles();
+    redraw_players();
+}
+
+void redraw_players() {
+    system("cls");
+    if (0 == party.m_max_player_count) {
+        return;
+    }
+
+    std::cout << "Host IP: " << party.m_host_ip_address.to_string() << std::endl << std::endl;
+
+    uint64_t timestamp = epoch_timestamp_milliseconds();
+    uint64_t latest_last_seen = timestamp - PLAYER_TIMEOUT_MILLISECONDS;
+
+    for (size_t i = 0; i < MAX_PLAYER_COUNT; i++) {
+        player_wrapper_t player_wrapper = players[i];
+        if (false == player_wrapper.m_included) {
+            continue;
+        }
+
+        player_data_t & player = player_data[player_wrapper.m_steam64_id];
+        if (party.m_our_index != i && player.m_last_seen < latest_last_seen) {
+            player_wrapper.m_included = false;
+            player_data.erase(player_wrapper.m_steam64_id);
+            continue;
+        }
+
+        std::cout << std::format("{:02d}) {:<32} {:s}", i + 1, player.m_username, player.m_ip_address.to_string());
+        if (party.m_host_index == i) {
+            std::cout << " [HOST]";
+        }
+
+        if (party.m_our_index == i) {
+            std::cout << " [US]";
+        }
+
+        std::cout << std::endl;
+    }
 }
 
 void update_player_roles() {
