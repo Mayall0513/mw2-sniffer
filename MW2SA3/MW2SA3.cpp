@@ -40,7 +40,7 @@ int main() {
     }
 
     pcap_if_t * current_device = all_devices;
-    int highest_index = 0;
+    uint32_t highest_index = 0;
 
     do {
         if (PCAP_IF_LOOPBACK == (current_device->flags & PCAP_IF_LOOPBACK) || PCAP_IF_RUNNING != (current_device->flags & PCAP_IF_RUNNING)) {
@@ -59,7 +59,7 @@ int main() {
         std::cin >> input;
 
         try {
-            int potential_parsed_input_index = std::stoi(input);
+            uint32_t potential_parsed_input_index = std::stoul(input);
             if (highest_index > potential_parsed_input_index) {
                 parsed_input_index = potential_parsed_input_index;
             }
@@ -242,7 +242,7 @@ void update_player_statuses() {
 void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const u_char * data) {
     (VOID) (user);
 
-    const char * cursor = reinterpret_cast<const char *>(data);
+    const uint8_t * cursor = reinterpret_cast<const uint8_t *>(data);
 
     const ethernet_header_t * ethernet_header = reinterpret_cast<const ethernet_header_t *>(cursor);
     cursor += sizeof(ethernet_header_t);
@@ -255,7 +255,7 @@ void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const u_c
 
     const size_t network_header_bytes = sizeof(ethernet_header_t) + ip_header->header_length_bytes() + sizeof(udp_header_t);
     const size_t remaining_bytes = ip_header->total_length() - network_header_bytes;
-    packet_parser packet_parser(reinterpret_cast<const uint8_t *>(data + network_header_bytes), remaining_bytes);
+    packet_parser packet_parser(cursor, remaining_bytes);
 
     bool is_outgoing = ip_header->m_source.m_packed_data == packed_internal_ip_address;
 
