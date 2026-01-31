@@ -4,6 +4,7 @@
 #include <string>
 
 #pragma pack(push, 1)
+
 struct mac_address_t {
 	uint8_t m_data[6];
 };
