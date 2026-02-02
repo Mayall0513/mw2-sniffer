@@ -16,7 +16,7 @@ private:
 public:
 	packet_parser(const uint8_t * buffer, size_t size);
 
-	bool read_bit();
+	uint8_t read_bit();
 	uint8_t read_bits_as_uint8(size_t count);
 	uint16_t read_bits_as_uint16(size_t count);
 	uint32_t read_bits_as_uint32(size_t count);
@@ -31,6 +31,6 @@ public:
 	void skip_bits(size_t bits);
 	void skip_bytes(size_t bytes);
 
-	bool has_remaining_data(size_t bytes, size_t bits = 0) const;
+	bool has_remaining_data(size_t bytes, size_t bits = 0U) const;
 };
 

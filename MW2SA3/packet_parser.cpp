@@ -16,9 +16,12 @@ std::string packet_parser::read_string() {
 	return output;
 }
 
-bool packet_parser::read_bit() {
-	if (0 == this->m_bits_read && this->m_bit_cursor < this->m_byte_cursor) {
-		this->m_bit_cursor = this->m_byte_cursor;
+uint8_t packet_parser::read_bit() {
+	if (0 == this->m_bits_read) {
+		if (this->m_bit_cursor < this->m_byte_cursor) {
+			this->m_bit_cursor = this->m_byte_cursor;
+		}
+		
 		this->m_byte_cursor++;
 	}
 	else if (8 == this->m_bits_read) {
@@ -100,15 +103,7 @@ uint64_t packet_parser::read_uint64() {
 
 void packet_parser::skip_bits(size_t bits) {
 	for (size_t i = 0; i < bits; i++) {
-		if (0 == this->m_bits_read && this->m_bit_cursor < this->m_byte_cursor) {
-			this->m_bit_cursor = this->m_byte_cursor;
-			this->m_byte_cursor++;
-		}
-		else if (8 == this->m_bits_read) {
-			this->m_bit_cursor = this->m_byte_cursor;
-			this->m_byte_cursor++;
-			this->m_bits_read = 0;
-		}
+		this->read_bit();
 	}
 }
 

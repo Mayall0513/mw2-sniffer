@@ -303,13 +303,18 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
 
     uint64_t received_timestamp = epoch_timestamp_milliseconds();
     uint32_t update_tick = packet_parser.read_uint32();
-    uint8_t  update_type = packet_parser.read_uint8();
-    uint8_t  player_count = packet_parser.read_uint8();
 
+    uint8_t packet_index = packet_parser.read_bits_as_uint8(2);
+    uint8_t packet_count = packet_parser.read_bits_as_uint8(2);
+
+    uint8_t player_count = packet_parser.read_uint8();
     party.m_player_count = player_count;
 
-    // If the least significant bit is not set, party information is stored as well as players
-    if (0 == (update_type & 1)) {
+    if (0 == packet_index) {
+        uint8_t has_string_suffix = packet_parser.read_bit();
+        uint8_t unknown0          = packet_parser.read_bits_as_uint8(2);
+        uint8_t unknown1          = packet_parser.read_bit();
+
         packet_parser.skip_bytes(8);
         packet_parser.read_uint32();
         packet_parser.read_uint8();
@@ -326,16 +331,21 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         uint16_t host_external_port = packet_parser.read_uint16();
         packet_parser.skip_bytes(40);
         uint64_t steam_lobby_id = packet_parser.read_uint64();
-        packet_parser.read_uint8();
-        packet_parser.skip_bytes(8);
-        packet_parser.read_uint8();
-        packet_parser.read_uint8();
+
+        if (1 == has_string_suffix) {
+            std::cout << packet_parser.read_string() << std::endl;
+            std::cout << packet_parser.read_string() << std::endl;
+        }
+        else {
+            // actual structure is 11 independent bytes but just going to skip 11 since we do not know what these are anyway.
+            packet_parser.skip_bytes(11);
+        }
+
         packet_parser.read_uint32();
 
         party.m_max_player_count = max_player_count;
         party.m_host_ip_address = host_external_ip;
     }
-
     while (true == packet_parser.has_remaining_data(42)) {
         // sanity check
         uint8_t index = packet_parser.read_uint8();
@@ -350,9 +360,9 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         }
 
         uint8_t nat_type = packet_parser.read_bits_as_uint8(2);
-        bool veteod_map = packet_parser.read_bit();
-        bool invited = packet_parser.read_bit();
-        bool headset_present = packet_parser.read_bit();
+        uint8_t veteod_map = packet_parser.read_bit();
+        uint8_t invited = packet_parser.read_bit();
+        uint8_t headset_present = packet_parser.read_bit();
         uint32_t voice_connectivity = packet_parser.read_bits_as_uint32(18);
         std::string username = packet_parser.read_string();
         packet_parser.skip_bytes(4);
@@ -394,9 +404,6 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
 
 void redraw_players() {
     system("cls");
-    if (0 == party.m_max_player_count) {
-        return;
-    }
 
     std::cout << "Host IP: " << party.m_host_ip_address.to_string() << std::endl << std::endl;
 
@@ -416,7 +423,7 @@ void redraw_players() {
             continue;
         }
 
-        std::cout << std::format("{:02d}) {:<32} {:s}", i + 1, player.m_username, player.m_ip_address.to_string());
+        std::cout << std::format("{:02d}) {:<15} {:s}", i + 1, player.m_ip_address.to_string(), player.m_username);
         if (party.m_host_index == i) {
             std::cout << " [HOST]";
         }
