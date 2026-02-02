@@ -24,6 +24,7 @@ uint32_t packed_external_ip_address;
 int main() {
     packed_external_ip_address = get_external_packed_ip_address();
     if (0 == packed_external_ip_address) {
+        std::cerr << "Could not get external IP address" << std::endl;
         return -1;
     }
 
@@ -61,7 +62,8 @@ int main() {
             }
         }
         catch (std::invalid_argument) {}
-    } while (-1 == parsed_input_index);
+    }
+    while (-1 == parsed_input_index);
 
     pcap_if_t * selected_device = all_devices;
     for (int i = 0; i < parsed_input_index; i++) {
@@ -87,7 +89,7 @@ int main() {
     pcap_setfilter(device_handle, &filter);
 
     if (nullptr == device_handle) {
-        std::cout << error_buffer << std::endl;
+        std::cerr << error_buffer << std::endl;
         return -1;
     }
 
