@@ -37,7 +37,7 @@ uint8_t packet_parser::read_bit() {
 
 uint8_t packet_parser::read_bits_as_uint8(size_t count) {
 	uint8_t buffer = 0;
-	for (int i = 0; i < count; i++) {
+	for (size_t i = 0; i < count; i++) {
 		buffer += read_bit() << i;
 	}
 
@@ -46,7 +46,7 @@ uint8_t packet_parser::read_bits_as_uint8(size_t count) {
 
 uint16_t packet_parser::read_bits_as_uint16(size_t count) {
 	uint16_t buffer = 0;
-	for (int i = 0; i < count; i++) {
+	for (size_t i = 0; i < count; i++) {
 		buffer += read_bit() << i;
 	}
 
@@ -55,7 +55,7 @@ uint16_t packet_parser::read_bits_as_uint16(size_t count) {
 
 uint32_t packet_parser::read_bits_as_uint32(size_t count) {
 	uint32_t buffer = 0;
-	for (int i = 0; i < count; i++) {
+	for (size_t i = 0; i < count; i++) {
 		buffer += read_bit() << i;
 	}
 
@@ -64,7 +64,7 @@ uint32_t packet_parser::read_bits_as_uint32(size_t count) {
 
 uint64_t packet_parser::read_bits_as_uint64(size_t count) {
 	uint64_t buffer = 0;
-	for (int i = 0; i < count; i++) {
+	for (size_t i = 0; i < count; i++) {
 		buffer += read_bit() << i;
 	}
 
