@@ -43,7 +43,7 @@ int main() {
             continue;
         }
 
-        std::cout << "(" << highest_index++ << ") " << current_device->description << std::endl;
+        std::cout << std::format("{:d}) {:s}", highest_index++, current_device->description) << std::endl;
     }
     while (current_device = current_device->next);
 
@@ -90,6 +90,9 @@ int main() {
         std::cout << error_buffer << std::endl;
         return -1;
     }
+
+    system("cls");
+    std::cout << "Waiting for data..." << std::endl;
 
     std::thread player_status_thread(update_player_statuses);
     pcap_loop(device_handle, 0, packet_handler, nullptr);
