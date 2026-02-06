@@ -32,8 +32,8 @@ int main() {
 
     pcap_if_t * all_devices;
     char error_buffer[PCAP_ERRBUF_SIZE];
-
-    if (-1 == pcap_findalldevs_ex(PCAP_SRC_IF_STRING, nullptr, &all_devices, error_buffer) || nullptr == all_devices) {
+    int find_all_result = pcap_findalldevs_ex(PCAP_SRC_IF_STRING, nullptr, &all_devices, error_buffer);
+    if (-1 == find_all_result) {
         std::cerr << error_buffer << std::endl;
         return -2;
     }
@@ -86,21 +86,34 @@ int main() {
     pcap_t * device_handle = pcap_open(selected_device->name, 65536, PCAP_OPENFLAG_PROMISCUOUS, 1000, nullptr, error_buffer);
     pcap_freealldevs(all_devices);
 
-    bpf_program filter;
-    pcap_compile(device_handle, &filter, "ip and udp and udp.port == 28960", 1, 0);
-    pcap_setfilter(device_handle, &filter);
-
     if (nullptr == device_handle) {
         std::cerr << error_buffer << std::endl;
-        return -1;
+        return -3;
     }
 
-    system("cls");
-    std::cout << "Waiting for data..." << std::endl;
+    bpf_program filter;
+    int compile_result = pcap_compile(device_handle, &filter, "udp port 28960", 1, 0);
+    if (-1 == compile_result) {
+        std::cerr << pcap_geterr(device_handle) << std::endl;
+        return -4;
+    }
+
+    int filter_result = pcap_setfilter(device_handle, &filter);
+    pcap_freecode(&filter);
+
+    if (-1 == filter_result) {
+        std::cerr << pcap_geterr(device_handle) << std::endl;
+        return -5;
+    }
 
     std::thread player_status_thread(update_player_statuses);
-    pcap_loop(device_handle, 0, packet_handler, nullptr);
+    int loop_result = pcap_loop(device_handle, 0, packet_handler, nullptr);
     player_thread_continue.store(false);
+
+    if (0 != loop_result) {
+        std::cerr << pcap_geterr(device_handle) << std::endl;
+        return -6;
+    }
 
     return 0;
 }
@@ -203,6 +216,9 @@ uint32_t get_external_packed_ip_address() {
 }
 
 void update_player_statuses() {
+    system("cls");
+    std::cout << "Waiting for data..." << std::endl;
+
     while (true == player_thread_continue.load()) {
         std::this_thread::sleep_for(1000ms);
         std::lock_guard<std::mutex> read_lock(party_players_mutex);
