@@ -24,11 +24,13 @@ uint32_t packed_internal_ip_address;
 uint32_t packed_external_ip_address;
 
 int main() {
-    packed_external_ip_address = get_external_packed_ip_address();
-    if (0 == packed_external_ip_address) {
+    bool external_ip_success = get_external_packed_ip_address(packed_external_ip_address);
+    if (false == external_ip_success) {
         std::cerr << "Could not get external IP address" << std::endl;
         return -1;
     }
+
+    std::cout << packed_external_ip_address << std::endl;
 
     pcap_if_t * all_devices;
     char error_buffer[PCAP_ERRBUF_SIZE];
@@ -118,7 +120,7 @@ int main() {
     return 0;
 }
 
-uint32_t get_external_packed_ip_address() {
+bool get_external_packed_ip_address(uint32_t& packed_internal_ip_address) {
     HINTERNET session = WinHttpOpen(
         L"MW2SA3",
         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
@@ -128,7 +130,7 @@ uint32_t get_external_packed_ip_address() {
     );
 
     if (nullptr == session) {
-        return 0;
+        return false;
     }
 
     HINTERNET connection = WinHttpConnect(
@@ -156,7 +158,7 @@ uint32_t get_external_packed_ip_address() {
     if (nullptr == request) {
         WinHttpCloseHandle(connection);
         WinHttpCloseHandle(session);
-        return 0;
+        return false;
     }
 
     bool send_success = WinHttpSendRequest(
@@ -170,12 +172,12 @@ uint32_t get_external_packed_ip_address() {
     );
 
     if (false == send_success) {
-        return 0;
+        return false;
     }
 
     bool receive_success = WinHttpReceiveResponse(request, NULL);
     if (false == receive_success) {
-        return 0;
+        return false;
     }
 
     std::string response_buffer {};
@@ -200,6 +202,9 @@ uint32_t get_external_packed_ip_address() {
                 read_buffer[bytes_read] = 0;
                 response_buffer.append(read_buffer);
             }
+            else {
+                return false;
+            }
 
             delete[] read_buffer;
         }
@@ -210,9 +215,8 @@ uint32_t get_external_packed_ip_address() {
     WinHttpCloseHandle(connection);
     WinHttpCloseHandle(session);
 
-    uint32_t value = 0;
-    inet_pton(AF_INET, response_buffer.c_str(), &value);
-    return value;
+    inet_pton(AF_INET, response_buffer.c_str(), &packed_internal_ip_address);
+    return true;
 }
 
 void update_player_statuses() {

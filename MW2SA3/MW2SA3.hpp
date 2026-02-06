@@ -40,7 +40,7 @@ struct player_data_t {
 std::regex partystate_regex("^\\d+partystate$");
 std::regex vt_regex("^vt$");
 
-uint32_t get_external_packed_ip_address();
+bool get_external_packed_ip_address(uint32_t& packed_internal_ip_address);
 
 void redraw_players();
 void update_player_roles();
