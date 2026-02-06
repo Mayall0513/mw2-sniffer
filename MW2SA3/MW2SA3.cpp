@@ -30,8 +30,6 @@ int main() {
         return -1;
     }
 
-    std::cout << packed_external_ip_address << std::endl;
-
     pcap_if_t * all_devices;
     char error_buffer[PCAP_ERRBUF_SIZE];
     int find_all_result = pcap_findalldevs(&all_devices, error_buffer);
