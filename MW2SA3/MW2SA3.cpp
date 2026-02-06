@@ -83,7 +83,7 @@ int main() {
         break;
     }
 
-    pcap_t * device_handle = pcap_open(selected_device->name, 65536, PCAP_OPENFLAG_PROMISCUOUS, 1000, nullptr, error_buffer);
+    pcap_t * device_handle = pcap_open_live(selected_device->name, 65536, PCAP_OPENFLAG_PROMISCUOUS, 1000, error_buffer);
     pcap_freealldevs(all_devices);
 
     if (nullptr == device_handle) {
