@@ -7,6 +7,7 @@
 #include <winhttp.h>
 #include <mutex>
 #include <unordered_map>
+#include <atomic>
 
 #pragma comment(lib, "winhttp.lib")
 
@@ -17,6 +18,7 @@ std::mutex party_players_mutex;
 party_t                                     party;
 player_wrapper_t                            players[MAX_PLAYER_COUNT];
 std::unordered_map<uint64_t, player_data_t> player_data;
+std::atomic<bool>                           player_thread_continue { true };
 
 uint32_t packed_internal_ip_address;
 uint32_t packed_external_ip_address;
@@ -98,6 +100,8 @@ int main() {
 
     std::thread player_status_thread(update_player_statuses);
     pcap_loop(device_handle, 0, packet_handler, nullptr);
+    player_thread_continue.store(false);
+
     return 0;
 }
 
@@ -199,7 +203,7 @@ uint32_t get_external_packed_ip_address() {
 }
 
 void update_player_statuses() {
-    while (true) {
+    while (true == player_thread_continue.load()) {
         std::this_thread::sleep_for(1000ms);
         std::lock_guard<std::mutex> read_lock(party_players_mutex);
         if (0 == party.m_max_player_count) {
