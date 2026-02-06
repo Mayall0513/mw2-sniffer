@@ -50,10 +50,10 @@ int main() {
 
     int parsed_input_index = -1;
     std::string input;
-
+    
     do {
         std::cout << "Pick a device by index: ";
-        std::cin >> input;
+        std::getline(std::cin, input);
 
         try {
             uint32_t potential_parsed_input_index = std::stoul(input);
