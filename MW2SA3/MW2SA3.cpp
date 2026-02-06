@@ -32,7 +32,7 @@ int main() {
 
     pcap_if_t * all_devices;
     char error_buffer[PCAP_ERRBUF_SIZE];
-    int find_all_result = pcap_findalldevs_ex(PCAP_SRC_IF_STRING, nullptr, &all_devices, error_buffer);
+    int find_all_result = pcap_findalldevs(&all_devices, error_buffer);
     if (-1 == find_all_result) {
         std::cerr << error_buffer << std::endl;
         return -2;
