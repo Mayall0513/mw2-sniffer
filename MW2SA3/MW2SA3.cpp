@@ -339,25 +339,25 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
 
     if (0 == packet_index) {
         uint8_t has_string_suffix = packet_parser.read_bit();
-        packet_parser.skip_bits(2); // unknown
-        packet_parser.skip_bits(1); // unknown
+        packet_parser.skip_bits(2);   // unknown
+        packet_parser.skip_bits(1);   // unknown
 
-        packet_parser.skip_bytes(8); // unknown
-        packet_parser.skip_bytes(4); // unknown
-        packet_parser.skip_bytes(1); // unknown
-        packet_parser.skip_bytes(4); // unknown
-        packet_parser.skip_bytes(4); // unknown
+        packet_parser.skip_bytes(8);  // unknown
+        packet_parser.skip_bytes(4);  // unknown
+        packet_parser.skip_bytes(1);  // unknown
+        packet_parser.skip_bytes(4);  // unknown
+        packet_parser.skip_bytes(4);  // unknown
         uint8_t max_player_count = packet_parser.read_uint8();
-        packet_parser.skip_bytes(1); // unknown
-        packet_parser.skip_bytes(1); // unknown
-        packet_parser.skip_bits(1);  // unknown
-        packet_parser.skip_bytes(8); // unknown
-        ipv4_address_t host_internal_ip = packet_parser.read_ipv4_address();
+        packet_parser.skip_bytes(1);  // unknown
+        packet_parser.skip_bytes(1);  // unknown
+        packet_parser.skip_bits(1);   // unknown
+        packet_parser.skip_bytes(8);  // unknown
+        packet_parser.skip_bytes(4);  // host internal IP   (confident)
         ipv4_address_t host_external_ip = packet_parser.read_ipv4_address();
-        uint16_t host_internal_port = packet_parser.read_uint16();
-        uint16_t host_external_port = packet_parser.read_uint16();
-        packet_parser.skip_bytes(40);  // left over   (confident - remainder of server data struct)
-        uint64_t steam_lobby_id = packet_parser.read_uint64();
+        packet_parser.skip_bytes(2);  // host internal port (confident)
+        packet_parser.skip_bytes(2);  // host external port (confident)
+        packet_parser.skip_bytes(40); // left over          (confident - remainder of server data struct)
+        packet_parser.skip_bytes(8);  // steam lobby id     (confident)
 
         if (1 == has_string_suffix) {
             // it's unclear what these strings are.
@@ -388,31 +388,31 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
             continue;
         }
 
-        packet_parser.skip_bits(2);  // NAT type           (confident - 3 NAT types)
-        packet_parser.skip_bits(1);  // vetoed current map (educated guess)
-        packet_parser.skip_bits(1);  // invited            (unsure)
-        packet_parser.skip_bits(1);  // headset present    (confident)
-        packet_parser.skip_bits(18); // voice connectivity (confident - bit per player)
+        packet_parser.skip_bits(2);   // NAT type             (confident - 3 NAT types)
+        packet_parser.skip_bits(1);   // vetoed current map   (educated guess)
+        packet_parser.skip_bits(1);   // invited              (unsure)
+        packet_parser.skip_bits(1);   // headset present      (confident)
+        packet_parser.skip_bits(18);  // voice connectivity   (confident - bit per player)
         std::string username = packet_parser.read_string();
-        packet_parser.skip_bytes(4); // clan tag (educated guess)
+        packet_parser.skip_bytes(4);  // clan tag             (educated guess)
         uint64_t steam64_id = packet_parser.read_uint64();
-        ipv4_address_t internal_ip = packet_parser.read_ipv4_address();
+        packet_parser.skip_bytes(4);  // player internal IP   (confident)
         ipv4_address_t external_ip = packet_parser.read_ipv4_address();
-        uint16_t internal_port = packet_parser.read_uint16();
-        uint16_t external_port = packet_parser.read_uint16();
-        packet_parser.skip_bytes(24); // left over   (confident - remainder of player data struct)
-        packet_parser.skip_bytes(8);  // challenge   (unsure)
-        packet_parser.skip_bits(5);   // party index (educated guess)
-        packet_parser.skip_bits(2);   // team        (confident - 3 teams)
-        packet_parser.skip_bytes(2);  // score       (confident)
-        packet_parser.skip_bytes(1);  // deaths      (confident)
-        packet_parser.skip_bytes(1);  // level       (confident)
-        packet_parser.skip_bytes(1);  // prestige    (confident)
-        packet_parser.skip_bytes(4);  // true skill  (unsure)
-        packet_parser.skip_bits(10);  // icon        (confident)
-        packet_parser.skip_bits(10);  // title       (confident)
-        packet_parser.skip_bits(6);   // nameplate   (unsure)
-        packet_parser.skip_bits(5);   // map packs   (educated guess)
+        packet_parser.skip_bytes(2);  // player internal port (confident)
+        packet_parser.skip_bytes(2);  // player external port (confident)
+        packet_parser.skip_bytes(24); // left over            (confident - remainder of player data struct)
+        packet_parser.skip_bytes(8);  // challenge            (unsure)
+        packet_parser.skip_bits(5);   // party index          (educated guess)
+        packet_parser.skip_bits(2);   // team                 (confident - 3 teams)
+        packet_parser.skip_bytes(2);  // score                (confident)
+        packet_parser.skip_bytes(1);  // deaths               (confident)
+        packet_parser.skip_bytes(1);  // level                (confident)
+        packet_parser.skip_bytes(1);  // prestige             (confident)
+        packet_parser.skip_bytes(4);  // true skill           (unsure)
+        packet_parser.skip_bits(10);  // icon                 (confident)
+        packet_parser.skip_bits(10);  // title                (confident)
+        packet_parser.skip_bits(6);   // nameplate            (unsure)
+        packet_parser.skip_bits(5);   // map packs            (educated guess)
 
         player_data_t& _player_data = player_data[steam64_id];
 
