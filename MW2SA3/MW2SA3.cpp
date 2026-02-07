@@ -360,11 +360,13 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         uint64_t steam_lobby_id = packet_parser.read_uint64();
 
         if (1 == has_string_suffix) {
-            std::cout << packet_parser.read_string() << std::endl;
-            std::cout << packet_parser.read_string() << std::endl;
+            // it's unclear what these strings are.
+            // a sensible guess might be map names but I have not been able to capture a packet with them in
+            packet_parser.read_string();
+            packet_parser.read_string();
         }
         else {
-            // actual structure is 11 independent bytes but just going to skip 11 since we do not know what these are anyway.
+            //  structure is actually 11 independent bytes but just going to skip 11 since we do not know what these are anyway.
             packet_parser.skip_bytes(11);
         }
 
@@ -377,7 +379,7 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         // sanity check
         uint8_t index = packet_parser.read_uint8();
         if (index >= MAX_PLAYER_COUNT) {
-            // if we get here something has gone seriously wrong, abort reading
+            // if we get here something has gone seriously wrong, abort reading to not corrupt data
             break;
         }
 
