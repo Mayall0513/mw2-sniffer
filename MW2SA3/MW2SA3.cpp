@@ -339,24 +339,24 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
 
     if (0 == packet_index) {
         uint8_t has_string_suffix = packet_parser.read_bit();
-        uint8_t unknown0          = packet_parser.read_bits_as_uint8(2);
-        uint8_t unknown1          = packet_parser.read_bit();
+        packet_parser.skip_bits(2); // unknown
+        packet_parser.skip_bits(1); // unknown
 
-        packet_parser.skip_bytes(8);
-        packet_parser.read_uint32();
-        packet_parser.read_uint8();
-        packet_parser.read_uint32();
-        packet_parser.read_uint32();
+        packet_parser.skip_bytes(8); // unknown
+        packet_parser.skip_bytes(4); // unknown
+        packet_parser.skip_bytes(1); // unknown
+        packet_parser.skip_bytes(4); // unknown
+        packet_parser.skip_bytes(4); // unknown
         uint8_t max_player_count = packet_parser.read_uint8();
-        packet_parser.read_uint8();
-        packet_parser.read_uint8();
-        packet_parser.read_bit();
-        packet_parser.skip_bytes(8);
+        packet_parser.skip_bytes(1); // unknown
+        packet_parser.skip_bytes(1); // unknown
+        packet_parser.skip_bits(1);  // unknown
+        packet_parser.skip_bytes(8); // unknown
         ipv4_address_t host_internal_ip = packet_parser.read_ipv4_address();
         ipv4_address_t host_external_ip = packet_parser.read_ipv4_address();
         uint16_t host_internal_port = packet_parser.read_uint16();
         uint16_t host_external_port = packet_parser.read_uint16();
-        packet_parser.skip_bytes(40);
+        packet_parser.skip_bytes(40);  // left over   (confident - remainder of server data struct)
         uint64_t steam_lobby_id = packet_parser.read_uint64();
 
         if (1 == has_string_suffix) {
@@ -370,7 +370,7 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
             packet_parser.skip_bytes(11);
         }
 
-        packet_parser.read_uint32();
+        packet_parser.read_uint32(); // unknown
 
         party.m_max_player_count = max_player_count;
         party.m_host_ip_address = host_external_ip;
@@ -388,31 +388,31 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
             continue;
         }
 
-        uint8_t nat_type = packet_parser.read_bits_as_uint8(2);
-        uint8_t veteod_map = packet_parser.read_bit();
-        uint8_t invited = packet_parser.read_bit();
-        uint8_t headset_present = packet_parser.read_bit();
-        uint32_t voice_connectivity = packet_parser.read_bits_as_uint32(18);
+        packet_parser.skip_bits(2);  // NAT type           (confident - 3 NAT types)
+        packet_parser.skip_bits(1);  // vetoed current map (educated guess)
+        packet_parser.skip_bits(1);  // invited            (unsure)
+        packet_parser.skip_bits(1);  // headset present    (confident)
+        packet_parser.skip_bits(18); // voice connectivity (confident - bit per player)
         std::string username = packet_parser.read_string();
-        packet_parser.skip_bytes(4);
+        packet_parser.skip_bytes(4); // clan tag (educated guess)
         uint64_t steam64_id = packet_parser.read_uint64();
         ipv4_address_t internal_ip = packet_parser.read_ipv4_address();
         ipv4_address_t external_ip = packet_parser.read_ipv4_address();
         uint16_t internal_port = packet_parser.read_uint16();
         uint16_t external_port = packet_parser.read_uint16();
-        packet_parser.skip_bytes(24);
-        uint64_t challenge = packet_parser.read_uint64();
-        uint8_t sub_party_index = packet_parser.read_bits_as_uint8(5);
-        uint8_t team = packet_parser.read_bits_as_uint8(2);
-        uint16_t score = packet_parser.read_uint16();
-        uint8_t deaths = packet_parser.read_uint8();
-        uint8_t level = packet_parser.read_uint8() + 1; // levels are offset by 1 since a player cannot be level 0
-        uint8_t prestige = packet_parser.read_uint8();
-        uint32_t true_skill = packet_parser.read_uint32();
-        uint16_t icon = packet_parser.read_bits_as_uint16(10);
-        uint16_t title = packet_parser.read_bits_as_uint16(10);
-        uint16_t nameplate = packet_parser.read_bits_as_uint8(6);
-        uint8_t map_packs = packet_parser.read_bits_as_uint8(5);
+        packet_parser.skip_bytes(24); // left over   (confident - remainder of player data struct)
+        packet_parser.skip_bytes(8);  // challenge   (unsure)
+        packet_parser.skip_bits(5);   // party index (educated guess)
+        packet_parser.skip_bits(2);   // team        (confident - 3 teams)
+        packet_parser.skip_bytes(2);  // score       (confident)
+        packet_parser.skip_bytes(1);  // deaths      (confident)
+        packet_parser.skip_bytes(1);  // level       (confident)
+        packet_parser.skip_bytes(1);  // prestige    (confident)
+        packet_parser.skip_bytes(4);  // true skill  (unsure)
+        packet_parser.skip_bits(10);  // icon        (confident)
+        packet_parser.skip_bits(10);  // title       (confident)
+        packet_parser.skip_bits(6);   // nameplate   (unsure)
+        packet_parser.skip_bits(5);   // map packs   (educated guess)
 
         player_data_t& _player_data = player_data[steam64_id];
 
