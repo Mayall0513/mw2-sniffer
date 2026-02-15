@@ -52,7 +52,7 @@ int main() {
 
     int parsed_input_index = -1;
     std::string input;
-    
+
     do {
         std::cout << "Pick a device by index: ";
         std::getline(std::cin, input);
@@ -77,7 +77,7 @@ int main() {
         if (AF_INET != selected_device_addresses->addr->sa_family) {
             continue;
         }
-        
+
         const sockaddr_in * sock_address = reinterpret_cast<const sockaddr_in *>(selected_device_addresses->addr);
         packed_internal_ip_address = sock_address->sin_addr.s_addr;
         break;
@@ -118,7 +118,7 @@ int main() {
     return 0;
 }
 
-bool get_external_packed_ip_address(uint32_t& packed_internal_ip_address) {
+bool get_external_packed_ip_address(uint32_t & packed_internal_ip_address) {
     HINTERNET session = WinHttpOpen(
         L"MW2SA3",
         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
@@ -238,7 +238,7 @@ void update_player_statuses() {
                 continue;
             }
 
-            player_data_t& player = player_data[player_wrapper.m_steam64_id];
+            player_data_t & player = player_data[player_wrapper.m_steam64_id];
             if (party.m_our_index != i && player.m_last_seen < latest_last_seen) {
                 player_wrapper.m_included = false;
                 player_data.erase(player_wrapper.m_steam64_id);
@@ -252,40 +252,42 @@ void update_player_statuses() {
     }
 }
 
-void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const u_char * data) {
+void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const uint8_t * data) {
     (VOID) (user);
+    (VOID) (headers);
 
-    const uint8_t * cursor = static_cast<const uint8_t *>(data);
+    const ethernet_header_t * ethernet_header = reinterpret_cast<const ethernet_header_t *>(data);
+    data += sizeof(ethernet_header_t);
 
-    const ethernet_header_t * ethernet_header = reinterpret_cast<const ethernet_header_t *>(cursor);
-    cursor += sizeof(ethernet_header_t);
+    const ipv4_header_t * ip_header = reinterpret_cast<const ipv4_header_t *>(data);
+    const uint8_t * packet_end = data + ip_header->total_length();
+    data += ip_header->header_length_bytes();
 
-    const ipv4_header_t * ip_header = reinterpret_cast<const ipv4_header_t *>(cursor);
-    cursor += ip_header->header_length_bytes();
+    const udp_header_t * udp_header = reinterpret_cast<const udp_header_t *>(data);
+    data += sizeof(udp_header_t);
 
-    const udp_header_t * udp_header = reinterpret_cast<const udp_header_t *>(cursor);
-    cursor += sizeof(udp_header_t);
+    const ptrdiff_t remaining_bytes = packet_end - data;
+    packet_parser packet_parser(data, remaining_bytes);
 
-    const size_t network_header_bytes = sizeof(ethernet_header_t) + ip_header->header_length_bytes() + sizeof(udp_header_t);
-    const size_t remaining_bytes = ip_header->total_length() - network_header_bytes;
-    packet_parser packet_parser(cursor, remaining_bytes);
+    const bool is_outgoing = ip_header->m_source.m_packed_data == packed_internal_ip_address;
 
-    bool is_outgoing = ip_header->m_source.m_packed_data == packed_internal_ip_address;
+    if (true == packet_parser.has_remaining_data(4)) {
+        uint32_t oob_check = packet_parser.read_bytes<uint32_t>(4);
+        if (0xFFFFFFFF == oob_check) {
+            std::string oob_type = packet_parser.read_string();
 
-    uint32_t oob_check = packet_parser.read_uint32();
-    if (0xFFFFFFFF == oob_check) {
-        std::string oob_type = packet_parser.read_string();
-
-        if (true == std::regex_search(oob_type, partystate_regex)) {
-            handle_playerstate_packet(packet_parser);
-        }
-        else if (true == std::regex_search(oob_type, vt_regex)) {
-            // we only want to consider incoming vt packets
-            if (false == is_outgoing) {
-                handle_vt_packet(ip_header, packet_parser);
+            if (true == std::regex_search(oob_type, partystate_regex)) {
+                handle_playerstate_packet(packet_parser);
+            }
+            else if (true == std::regex_search(oob_type, vt_regex)) {
+                // we only want to consider incoming vt packets
+                if (false == is_outgoing) {
+                    handle_vt_packet(ip_header, packet_parser);
+                }
             }
         }
     }
+
 
     // for all other types, we only care if the packet is outgoing as we can trust our client
     // unsure if this has unintended side effects
@@ -312,8 +314,8 @@ void handle_vt_packet(const ipv4_header_t * ip_header, packet_parser & packet_pa
     std::lock_guard<std::mutex> scope_lock(party_players_mutex);
 
     uint64_t received_timestamp = epoch_timestamp_milliseconds();
-    packet_parser.read_uint8();
-    uint64_t steam64_id = packet_parser.read_uint64();
+    packet_parser.skip_bytes(1);
+    uint64_t steam64_id = packet_parser.read_bytes<uint64_t>(8);
 
     player_data_t & _player_data = player_data[steam64_id];
 
@@ -329,16 +331,16 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
     std::lock_guard<std::mutex> scope_lock(party_players_mutex);
 
     uint64_t received_timestamp = epoch_timestamp_milliseconds();
-    uint32_t update_tick = packet_parser.read_uint32();
+    uint32_t update_tick = packet_parser.read_bytes<uint32_t>(4);
 
-    uint8_t packet_index = packet_parser.read_bits_as_uint8(2);
-    uint8_t packet_count = packet_parser.read_bits_as_uint8(2);
+    uint8_t packet_index = packet_parser.read_bits<uint8_t>(2);
+    uint8_t packet_count = packet_parser.read_bits<uint8_t>(2);
 
-    uint8_t player_count = packet_parser.read_uint8();
+    uint8_t player_count = packet_parser.read_bytes<uint8_t>(1);
     party.m_player_count = player_count;
 
     if (0 == packet_index) {
-        uint8_t has_string_suffix = packet_parser.read_bit();
+        uint8_t has_string_suffix = packet_parser.read_bits<uint8_t>(1);
         packet_parser.skip_bits(2);   // unknown
         packet_parser.skip_bits(1);   // unknown
 
@@ -347,13 +349,13 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         packet_parser.skip_bytes(1);  // unknown
         packet_parser.skip_bytes(4);  // unknown
         packet_parser.skip_bytes(4);  // unknown
-        uint8_t max_player_count = packet_parser.read_uint8();
+        uint8_t max_player_count = packet_parser.read_bytes<uint8_t>(1);
         packet_parser.skip_bytes(1);  // unknown
         packet_parser.skip_bytes(1);  // unknown
         packet_parser.skip_bits(1);   // unknown
         packet_parser.skip_bytes(8);  // unknown
         packet_parser.skip_bytes(4);  // host internal IP   (confident)
-        ipv4_address_t host_external_ip = packet_parser.read_ipv4_address();
+        ipv4_address_t host_external_ip = packet_parser.read_bytes<ipv4_address_t>(4);
         packet_parser.skip_bytes(2);  // host internal port (confident)
         packet_parser.skip_bytes(2);  // host external port (confident)
         packet_parser.skip_bytes(40); // left over          (confident - remainder of server data struct)
@@ -361,7 +363,7 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
 
         if (1 == has_string_suffix) {
             // it's unclear what these strings are.
-            // a sensible guess might be map names but I have not been able to capture a packet with them in
+            // a sensible guess would be map names but I have not been able to capture a packet with them in
             packet_parser.read_string();
             packet_parser.read_string();
         }
@@ -370,21 +372,22 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
             packet_parser.skip_bytes(11);
         }
 
-        packet_parser.read_uint32(); // unknown
+        packet_parser.skip_bytes(4); // unknown
 
         party.m_max_player_count = max_player_count;
         party.m_host_ip_address = host_external_ip;
     }
+
     while (true == packet_parser.has_remaining_data(42)) {
         // sanity check
-        uint8_t index = packet_parser.read_uint8();
+        uint8_t index = packet_parser.read_bytes<uint8_t>(1);
         if (index >= MAX_PLAYER_COUNT) {
             // if we get here something has gone seriously wrong, abort reading to not corrupt data
             break;
         }
 
-        bool not_included = packet_parser.read_bit();
-        if (true == not_included) {
+        uint8_t not_included_flag = packet_parser.read_bits<uint8_t>(1);
+        if (1 == not_included_flag) {
             continue;
         }
 
@@ -395,9 +398,9 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         packet_parser.skip_bits(18);  // voice connectivity   (confident - bit per player)
         std::string username = packet_parser.read_string();
         packet_parser.skip_bytes(4);  // clan tag             (educated guess)
-        uint64_t steam64_id = packet_parser.read_uint64();
+        uint64_t steam64_id = packet_parser.read_bytes<uint64_t>(8);
         packet_parser.skip_bytes(4);  // player internal IP   (confident)
-        ipv4_address_t external_ip = packet_parser.read_ipv4_address();
+        ipv4_address_t external_ip = packet_parser.read_bytes<ipv4_address_t>(4);
         packet_parser.skip_bytes(2);  // player internal port (confident)
         packet_parser.skip_bytes(2);  // player external port (confident)
         packet_parser.skip_bytes(24); // left over            (confident - remainder of player data struct)
@@ -414,7 +417,7 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         packet_parser.skip_bits(6);   // nameplate            (unsure)
         packet_parser.skip_bits(5);   // map packs            (educated guess)
 
-        player_data_t& _player_data = player_data[steam64_id];
+        player_data_t & _player_data = player_data[steam64_id];
 
         if (false == _player_data.m_ip_from_vt) {
             _player_data.m_ip_address = external_ip;
