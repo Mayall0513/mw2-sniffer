@@ -17,6 +17,10 @@ std::string packet_parser::read_string() {
 }
 
 void packet_parser::skip_bits(size_t bits) {
+	if (false == this->has_remaining_data(0U, bits)) {
+		throw std::runtime_error("Not enough data remaining");
+	}
+
 	while (bits > 0) {
 		if (0 == this->m_bits_read) {
 			if (this->m_bit_cursor < this->m_byte_cursor) {
@@ -42,6 +46,10 @@ void packet_parser::skip_bits(size_t bits) {
 }
 
 void packet_parser::skip_bytes(size_t bytes) {
+	if (false == this->has_remaining_data(bytes)) {
+		throw std::runtime_error("Not enough data remaining");
+	}
+
 	this->m_byte_cursor += bytes;
 }
 
