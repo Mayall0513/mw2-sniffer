@@ -1,13 +1,12 @@
 #include "MW2SA3.hpp"
-
 #include "infpod.hpp"
 
-#include <chrono>
 #include <thread>
 #include <winhttp.h>
 #include <mutex>
 #include <unordered_map>
 #include <atomic>
+#include <iostream>
 
 #pragma comment(lib, "winhttp.lib")
 

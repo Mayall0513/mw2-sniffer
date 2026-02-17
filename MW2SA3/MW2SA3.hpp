@@ -1,14 +1,10 @@
 #include "packet_parser.hpp"
 
-#include <iostream>
-#include <sstream>
 #include <string>
 #include <chrono>
 #include <regex>
 
 #include <pcap.h>
-#include <winsock2.h>
-#include <tchar.h>
 
 // The maximum lobby size is 18 in MW2, we're safe to set that same constraint
 constexpr uint8_t MAX_PLAYER_COUNT = 18;
