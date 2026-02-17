@@ -45,7 +45,7 @@ bool get_external_packed_ip_address(uint32_t& packed_internal_ip_address);
 void redraw_players();
 void update_player_roles();
 void update_player_statuses();
-void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const u_char * data);
+void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const uint8_t * data);
 
 void handle_playerstate_packet(packet_parser & packet_parser);
 void handle_vt_packet(const ipv4_header_t * ip_header, packet_parser & packet_parser);

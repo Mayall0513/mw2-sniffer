@@ -288,7 +288,6 @@ void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const uin
         }
     }
 
-
     // for all other types, we only care if the packet is outgoing as we can trust our client
     // unsure if this has unintended side effects
     if (true == is_outgoing) {
