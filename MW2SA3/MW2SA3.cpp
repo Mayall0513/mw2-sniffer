@@ -105,6 +105,12 @@ int main() {
         return -5;
     }
 
+    // set code page to match MW2's
+    // important for Russian names in particular
+    //
+    // 1252 is CP1252
+    SetConsoleOutputCP(1252);
+
     std::thread player_status_thread(update_player_statuses);
     int loop_result = pcap_loop(device_handle, 0, packet_handler, nullptr);
     player_thread_continue.store(false);
