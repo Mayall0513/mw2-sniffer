@@ -105,10 +105,10 @@ int main() {
         return -5;
     }
 
-    // set code page to match MW2's
+    // set code page to match the one in MW2's English releases
     // important for Russian names in particular
     //
-    // 1252 is CP1252
+    // 1252 is CP1252/Windows-1252 (https://en.wikipedia.org/wiki/Windows-1252)
     SetConsoleOutputCP(1252);
 
     std::thread player_status_thread(update_player_statuses);
