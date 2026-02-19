@@ -377,13 +377,7 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
     }
 
     while (true == packet_parser.has_remaining_data(67, 62)) {
-        // sanity check
         uint8_t index = packet_parser.read_bytes<uint8_t>(1);
-        if (index >= MAX_PLAYER_COUNT) {
-            // if we get here something has gone seriously wrong, abort reading to not corrupt data
-            break;
-        }
-
         uint8_t not_included_flag = packet_parser.read_bits<uint8_t>(1);
         if (1 == not_included_flag) {
             continue;
