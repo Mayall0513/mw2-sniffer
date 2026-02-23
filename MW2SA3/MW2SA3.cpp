@@ -28,23 +28,22 @@ int main() {
 
     pcap_if_t * all_devices;
     char error_buffer[PCAP_ERRBUF_SIZE];
+
     int find_all_result = pcap_findalldevs(&all_devices, error_buffer);
     if (-1 == find_all_result) {
         std::cerr << error_buffer << std::endl;
         return -2;
     }
 
-    pcap_if_t * current_device = all_devices;
     uint32_t highest_index = 0;
-
-    do {
+    for (pcap_if_t * current_device = all_devices; nullptr != current_device; current_device = current_device->next) {
         if (PCAP_IF_LOOPBACK == (current_device->flags & PCAP_IF_LOOPBACK) || PCAP_IF_RUNNING != (current_device->flags & PCAP_IF_RUNNING)) {
+            highest_index++;
             continue;
         }
 
         std::cout << std::format("{:d}) {:s}", highest_index++, current_device->description) << std::endl;
     }
-    while (current_device = current_device->next);
 
     int parsed_input_index = -1;
     std::string input;
