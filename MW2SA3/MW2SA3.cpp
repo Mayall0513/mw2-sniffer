@@ -115,6 +115,9 @@ int main() {
     // 1252 is CP1252/Windows-1252 (https://en.wikipedia.org/wiki/Windows-1252)
     SetConsoleOutputCP(1252);
 
+    system("cls");
+    std::cout << "Waiting for data...";
+
     std::thread player_status_thread(update_player_statuses);
     int loop_result = pcap_loop(device_handle, 0, packet_handler, nullptr);
     player_thread_continue.store(false);
@@ -228,7 +231,6 @@ bool get_external_packed_ip_address(uint32_t & packed_internal_ip_address) {
 
 void update_player_statuses() {
     system("cls");
-    std::cout << "Waiting for data..." << std::endl;
 
     while (true == player_thread_continue.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
