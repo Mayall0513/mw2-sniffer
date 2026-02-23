@@ -36,7 +36,7 @@ int main() {
     }
 
     uint32_t highest_index = 0;
-    for (pcap_if_t * current_device = all_devices; nullptr != current_device; current_device = current_device->next) {
+    for (const pcap_if_t * current_device = all_devices; nullptr != current_device; current_device = current_device->next) {
         if (PCAP_IF_LOOPBACK == (current_device->flags & PCAP_IF_LOOPBACK) || PCAP_IF_RUNNING != (current_device->flags & PCAP_IF_RUNNING)) {
             highest_index++;
             continue;
@@ -62,7 +62,7 @@ int main() {
     }
     while (-1 == parsed_input_index);
 
-    pcap_if_t * selected_device = all_devices;
+    const pcap_if_t * selected_device = all_devices;
     for (int i = 0; i < parsed_input_index && nullptr != selected_device; i++) {
         selected_device = selected_device->next;
     }
@@ -72,7 +72,7 @@ int main() {
         return -3;
     }
 
-    for (pcap_addr_t * selected_device_addresses = selected_device->addresses; nullptr != selected_device_addresses; selected_device_addresses = selected_device_addresses->next) {
+    for (const pcap_addr_t * selected_device_addresses = selected_device->addresses; nullptr != selected_device_addresses; selected_device_addresses = selected_device_addresses->next) {
         if (nullptr == selected_device_addresses->addr) {
             continue;
         }
