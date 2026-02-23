@@ -10,7 +10,6 @@
 
 #pragma comment(lib, "winhttp.lib")
 
-using namespace std::chrono_literals;
 
 std::mutex party_players_mutex;
 
@@ -227,7 +226,7 @@ void update_player_statuses() {
     std::cout << "Waiting for data..." << std::endl;
 
     while (true == player_thread_continue.load()) {
-        std::this_thread::sleep_for(1000ms);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         std::lock_guard<std::mutex> read_lock(party_players_mutex);
         if (0 == party.m_max_player_count) {
             continue;
