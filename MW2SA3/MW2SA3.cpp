@@ -263,10 +263,7 @@ void update_player_statuses() {
     }
 }
 
-void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const uint8_t * data) {
-    (VOID) (user);
-    (VOID) (headers);
-
+void packet_handler([[maybe_unused]] u_char * user, [[maybe_unused]] const struct pcap_pkthdr * headers, const uint8_t * data) {
     const ethernet_header_t * ethernet_header = reinterpret_cast<const ethernet_header_t *>(data);
     data += sizeof(ethernet_header_t);
 
