@@ -13,24 +13,24 @@ constexpr uint8_t MAX_PLAYER_COUNT = 18;
 constexpr uint32_t PLAYER_TIMEOUT_MILLISECONDS = 720000;
 
 struct party_t {
-	uint8_t        m_max_player_count;
-	uint8_t        m_player_count;
-	ipv4_address_t m_host_ip_address;
-	uint8_t        m_our_index;
-	uint8_t        m_host_index;
+	uint8_t        m_max_player_count { 0 };
+	uint8_t        m_player_count     { 0 };
+	ipv4_address_t m_host_ip_address  { 0 };
+	uint8_t        m_our_index        { 0 };
+	uint8_t        m_host_index       { 0 };
 };
 
 struct player_wrapper_t {
-	bool     m_included;
-	uint64_t m_steam64_id;
+	bool     m_included   { false };
+	uint64_t m_steam64_id { 0 };
 };
 
 struct player_data_t {
-	std::string    m_username { "unnamed" };
-	uint64_t       m_last_seen;
-	uint64_t       m_steam64_id;
-	ipv4_address_t m_ip_address;
-	bool           m_ip_from_vt;
+	std::string    m_username   { "unnamed" };
+	uint64_t       m_last_seen  { 0 };
+	uint64_t       m_steam64_id { 0 };
+	ipv4_address_t m_ip_address { 0 };
+	bool           m_ip_from_vt { false };
 };
 
 std::regex partystate_regex("^\\d+partystate$");
