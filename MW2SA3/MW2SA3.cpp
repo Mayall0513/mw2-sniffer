@@ -230,8 +230,6 @@ bool get_external_packed_ip_address(uint32_t & packed_internal_ip_address) {
 }
 
 void update_player_statuses() {
-    system("cls");
-
     while (true == player_thread_continue.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         std::lock_guard<std::mutex> read_lock(party_players_mutex);
