@@ -244,7 +244,7 @@ void update_player_statuses() {
         bool     any_removed = false;
 
         for (size_t i = 0; i < MAX_PLAYER_COUNT; i++) {
-            player_wrapper_t player_wrapper = players[i];
+            player_wrapper_t & player_wrapper = players[i];
             if (false == player_wrapper.m_included) {
                 continue;
             }
