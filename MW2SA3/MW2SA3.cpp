@@ -1,15 +1,13 @@
 #include "MW2SA3.hpp"
 #include "infpod.hpp"
 
-#include <thread>
 #include <winhttp.h>
+
+#include <thread>
 #include <mutex>
 #include <unordered_map>
 #include <atomic>
 #include <iostream>
-
-#pragma comment(lib, "winhttp.lib")
-
 
 std::mutex party_players_mutex;
 
@@ -299,7 +297,7 @@ void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const uin
         uint64_t received_timestamp = epoch_timestamp_milliseconds();
 
         for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
-            player_wrapper_t player_wrapper = players[i];
+            player_wrapper_t & player_wrapper = players[i];
             if (false == player_wrapper.m_included) {
                 continue;
             }
@@ -371,7 +369,7 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
             packet_parser.read_string();
         }
         else {
-            //  structure is actually 11 independent bytes but just going to skip 11 since we do not know what these are anyway.
+            // structure is actually 11 independent bytes but just going to skip 11 since we do not know what these are anyway.
             packet_parser.skip_bytes(11);
         }
 
@@ -467,7 +465,7 @@ void redraw_players() {
 
 void update_player_roles() {
     for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
-        player_wrapper_t player_wrapper = players[i];
+        player_wrapper_t & player_wrapper = players[i];
         if (false == player_wrapper.m_included) {
             continue;
         }
