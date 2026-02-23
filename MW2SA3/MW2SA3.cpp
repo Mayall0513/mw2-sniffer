@@ -440,7 +440,7 @@ void redraw_players() {
     uint64_t latest_last_seen = timestamp - PLAYER_TIMEOUT_MILLISECONDS;
 
     for (size_t i = 0; i < MAX_PLAYER_COUNT; i++) {
-        player_wrapper_t player_wrapper = players[i];
+        player_wrapper_t & player_wrapper = players[i];
         if (false == player_wrapper.m_included) {
             continue;
         }
@@ -472,7 +472,7 @@ void update_player_roles() {
             continue;
         }
 
-        player_data_t player = player_data[player_wrapper.m_steam64_id];
+        player_data_t & player = player_data[player_wrapper.m_steam64_id];
         if (player.m_ip_address.m_packed_data == party.m_host_ip_address.m_packed_data) {
             party.m_host_index = i;
         }
