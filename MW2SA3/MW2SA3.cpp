@@ -249,7 +249,7 @@ void update_player_statuses() {
                 continue;
             }
 
-            player_data_t & player = player_data[player_wrapper.m_steam64_id];
+            const player_data_t & player = player_data[player_wrapper.m_steam64_id];
             if (party.m_our_index != i && player.m_last_seen < latest_last_seen) {
                 player_wrapper.m_included = false;
                 player_data.erase(player_wrapper.m_steam64_id);
@@ -306,7 +306,7 @@ void packet_handler(u_char * user, const struct pcap_pkthdr * headers, const uin
         uint64_t received_timestamp = epoch_timestamp_milliseconds();
 
         for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
-            player_wrapper_t & player_wrapper = players[i];
+            const player_wrapper_t & player_wrapper = players[i];
             if (false == player_wrapper.m_included) {
                 continue;
             }
@@ -447,18 +447,12 @@ void redraw_players() {
     uint64_t latest_last_seen = timestamp - PLAYER_TIMEOUT_MILLISECONDS;
 
     for (size_t i = 0; i < MAX_PLAYER_COUNT; i++) {
-        player_wrapper_t & player_wrapper = players[i];
+        const player_wrapper_t & player_wrapper = players[i];
         if (false == player_wrapper.m_included) {
             continue;
         }
 
-        player_data_t & player = player_data[player_wrapper.m_steam64_id];
-        if (party.m_our_index != i && player.m_last_seen < latest_last_seen) {
-            player_wrapper.m_included = false;
-            player_data.erase(player_wrapper.m_steam64_id);
-            continue;
-        }
-
+        const player_data_t & player = player_data[player_wrapper.m_steam64_id];
         std::cout << std::format("{:02d}) {:<15} {:s}", i + 1, player.m_ip_address.to_string(), player.m_username);
         if (party.m_host_index == i) {
             std::cout << " [HOST]";
@@ -474,12 +468,12 @@ void redraw_players() {
 
 void update_player_roles() {
     for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
-        player_wrapper_t & player_wrapper = players[i];
+        const player_wrapper_t & player_wrapper = players[i];
         if (false == player_wrapper.m_included) {
             continue;
         }
 
-        player_data_t & player = player_data[player_wrapper.m_steam64_id];
+        const player_data_t & player = player_data[player_wrapper.m_steam64_id];
         if (player.m_ip_address.m_packed_data == party.m_host_ip_address.m_packed_data) {
             party.m_host_index = i;
         }
