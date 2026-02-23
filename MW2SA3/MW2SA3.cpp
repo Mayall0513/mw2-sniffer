@@ -20,7 +20,7 @@ uint32_t packed_internal_ip_address;
 uint32_t packed_external_ip_address;
 
 int main() {
-    bool external_ip_success = get_external_packed_ip_address(packed_external_ip_address);
+    const bool external_ip_success = get_external_packed_ip_address(packed_external_ip_address);
     if (false == external_ip_success) {
         std::cerr << "Could not get external IP address" << std::endl;
         return -1;
@@ -29,12 +29,12 @@ int main() {
     pcap_if_t * all_devices;
     char error_buffer[PCAP_ERRBUF_SIZE];
 
-    int find_all_result = pcap_findalldevs(&all_devices, error_buffer);
+    const int find_all_result = pcap_findalldevs(&all_devices, error_buffer);
     if (-1 == find_all_result) {
         std::cerr << error_buffer << std::endl;
         return -2;
     }
-
+   
     uint32_t highest_index = 0;
     for (const pcap_if_t * current_device = all_devices; nullptr != current_device; current_device = current_device->next) {
         if (PCAP_IF_LOOPBACK == (current_device->flags & PCAP_IF_LOOPBACK) || PCAP_IF_RUNNING != (current_device->flags & PCAP_IF_RUNNING)) {
@@ -53,7 +53,7 @@ int main() {
         std::getline(std::cin, input);
 
         try {
-            uint32_t potential_parsed_input_index = std::stoul(input);
+            const uint32_t potential_parsed_input_index = std::stoul(input);
             if (highest_index > potential_parsed_input_index) {
                 parsed_input_index = potential_parsed_input_index;
             }
@@ -95,13 +95,13 @@ int main() {
     }
 
     bpf_program filter;
-    int compile_result = pcap_compile(device_handle, &filter, "udp port 28960", 1, 0);
+    const int compile_result = pcap_compile(device_handle, &filter, "udp port 28960", 1, 0);
     if (-1 == compile_result) {
         std::cerr << pcap_geterr(device_handle) << std::endl;
         return -5;
     }
 
-    int filter_result = pcap_setfilter(device_handle, &filter);
+    const int filter_result = pcap_setfilter(device_handle, &filter);
     pcap_freecode(&filter);
 
     if (-1 == filter_result) {
@@ -119,7 +119,7 @@ int main() {
     std::cout << "Waiting for data...";
 
     std::thread player_status_thread(update_player_statuses);
-    int loop_result = pcap_loop(device_handle, 0, packet_handler, nullptr);
+    const int loop_result = pcap_loop(device_handle, 0, packet_handler, nullptr);
     player_thread_continue.store(false);
 
     if (0 != loop_result) {
@@ -171,7 +171,7 @@ bool get_external_packed_ip_address(uint32_t & packed_internal_ip_address) {
         return false;
     }
 
-    bool send_success = WinHttpSendRequest(
+    const bool send_success = WinHttpSendRequest(
         request,
         WINHTTP_NO_ADDITIONAL_HEADERS,
         0,
@@ -185,7 +185,7 @@ bool get_external_packed_ip_address(uint32_t & packed_internal_ip_address) {
         return false;
     }
 
-    bool receive_success = WinHttpReceiveResponse(request, NULL);
+    const bool receive_success = WinHttpReceiveResponse(request, NULL);
     if (false == receive_success) {
         return false;
     }
@@ -237,8 +237,8 @@ void update_player_statuses() {
             continue;
         }
 
-        uint64_t timestamp = epoch_timestamp_milliseconds();
-        uint64_t latest_last_seen = timestamp - PLAYER_TIMEOUT_MILLISECONDS;
+        const uint64_t timestamp = epoch_timestamp_milliseconds();
+        const uint64_t latest_last_seen = timestamp - PLAYER_TIMEOUT_MILLISECONDS;
         bool     any_removed = false;
 
         for (size_t i = 0; i < MAX_PLAYER_COUNT; i++) {
@@ -278,9 +278,10 @@ void packet_handler([[maybe_unused]] u_char * user, [[maybe_unused]] const struc
     const bool is_outgoing = ip_header->m_source.m_packed_data == packed_internal_ip_address;
 
     if (true == packet_parser.has_remaining_data(4)) {
-        uint32_t oob_check = packet_parser.read_bytes<uint32_t>(4);
+        const uint32_t oob_check = packet_parser.read_bytes<uint32_t>(4);
+
         if (0xFFFFFFFF == oob_check) {
-            std::string oob_type = packet_parser.read_string();
+            const std::string oob_type = packet_parser.read_string();
 
             if (true == std::regex_search(oob_type, partystate_regex)) {
                 handle_playerstate_packet(packet_parser);
@@ -297,8 +298,8 @@ void packet_handler([[maybe_unused]] u_char * user, [[maybe_unused]] const struc
     // for all other types, we only care if the packet is outgoing as we can trust our client
     // unsure if this has unintended side effects
     if (true == is_outgoing) {
-        uint32_t packed_destination = ip_header->m_destiniation.m_packed_data;
-        uint64_t received_timestamp = epoch_timestamp_milliseconds();
+        const uint32_t packed_destination = ip_header->m_destiniation.m_packed_data;
+        const uint64_t received_timestamp = epoch_timestamp_milliseconds();
 
         for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
             const player_wrapper_t & player_wrapper = players[i];
@@ -318,9 +319,9 @@ void packet_handler([[maybe_unused]] u_char * user, [[maybe_unused]] const struc
 void handle_vt_packet(const ipv4_header_t * ip_header, packet_parser & packet_parser) {
     std::lock_guard<std::mutex> scope_lock(party_players_mutex);
 
-    uint64_t received_timestamp = epoch_timestamp_milliseconds();
+    const uint64_t received_timestamp = epoch_timestamp_milliseconds();
     packet_parser.skip_bytes(1);
-    uint64_t steam64_id = packet_parser.read_bytes<uint64_t>(8);
+    const uint64_t steam64_id = packet_parser.read_bytes<uint64_t>(8);
 
     player_data_t & _player_data = player_data[steam64_id];
 
@@ -335,17 +336,17 @@ void handle_vt_packet(const ipv4_header_t * ip_header, packet_parser & packet_pa
 void handle_playerstate_packet(packet_parser & packet_parser) {
     std::lock_guard<std::mutex> scope_lock(party_players_mutex);
 
-    uint64_t received_timestamp = epoch_timestamp_milliseconds();
-    uint32_t update_tick = packet_parser.read_bytes<uint32_t>(4);
+    const uint64_t received_timestamp = epoch_timestamp_milliseconds();
+    const uint32_t update_tick = packet_parser.read_bytes<uint32_t>(4);
 
-    uint8_t packet_index = packet_parser.read_bits<uint8_t>(2);
-    uint8_t packet_count = packet_parser.read_bits<uint8_t>(2);
+    const uint8_t packet_index = packet_parser.read_bits<uint8_t>(2);
+    const uint8_t packet_count = packet_parser.read_bits<uint8_t>(2);
 
-    uint8_t player_count = packet_parser.read_bytes<uint8_t>(1);
+    const uint8_t player_count = packet_parser.read_bytes<uint8_t>(1);
     party.m_player_count = player_count;
 
     if (0 == packet_index) {
-        uint8_t has_string_suffix = packet_parser.read_bits<uint8_t>(1);
+        const uint8_t has_string_suffix = packet_parser.read_bits<uint8_t>(1);
         packet_parser.skip_bits(2);   // unknown
         packet_parser.skip_bits(1);   // unknown
 
@@ -354,13 +355,13 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         packet_parser.skip_bytes(1);  // unknown
         packet_parser.skip_bytes(4);  // unknown
         packet_parser.skip_bytes(4);  // unknown
-        uint8_t max_player_count = packet_parser.read_bytes<uint8_t>(1);
+        const uint8_t max_player_count = packet_parser.read_bytes<uint8_t>(1);
         packet_parser.skip_bytes(1);  // unknown
         packet_parser.skip_bytes(1);  // unknown
         packet_parser.skip_bits(1);   // unknown
         packet_parser.skip_bytes(8);  // unknown
         packet_parser.skip_bytes(4);  // host internal IP   (confident)
-        ipv4_address_t host_external_ip = packet_parser.read_bytes<ipv4_address_t>(4);
+        const ipv4_address_t host_external_ip = packet_parser.read_bytes<ipv4_address_t>(4);
         packet_parser.skip_bytes(2);  // host internal port (confident)
         packet_parser.skip_bytes(2);  // host external port (confident)
         packet_parser.skip_bytes(40); // left over          (confident - remainder of server data struct)
@@ -384,8 +385,8 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
     }
 
     while (true == packet_parser.has_remaining_data(67, 62)) {
-        uint8_t index = packet_parser.read_bytes<uint8_t>(1);
-        uint8_t not_included_flag = packet_parser.read_bits<uint8_t>(1);
+        const uint8_t index = packet_parser.read_bytes<uint8_t>(1);
+        const uint8_t not_included_flag = packet_parser.read_bits<uint8_t>(1);
         if (1 == not_included_flag) {
             continue;
         }
@@ -397,9 +398,9 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         packet_parser.skip_bits(18);  // voice connectivity   (confident - bit per player)
         std::string username = packet_parser.read_string();
         packet_parser.skip_bytes(4);  // clan tag             (educated guess)
-        uint64_t steam64_id = packet_parser.read_bytes<uint64_t>(8);
+        const uint64_t steam64_id = packet_parser.read_bytes<uint64_t>(8);
         packet_parser.skip_bytes(4);  // player internal IP   (confident)
-        ipv4_address_t external_ip = packet_parser.read_bytes<ipv4_address_t>(4);
+        const ipv4_address_t external_ip = packet_parser.read_bytes<ipv4_address_t>(4);
         packet_parser.skip_bytes(2);  // player internal port (confident)
         packet_parser.skip_bytes(2);  // player external port (confident)
         packet_parser.skip_bytes(24); // left over            (confident - remainder of player data struct)
@@ -417,12 +418,11 @@ void handle_playerstate_packet(packet_parser & packet_parser) {
         packet_parser.skip_bits(5);   // map packs            (educated guess)
 
         player_data_t & _player_data = player_data[steam64_id];
-
         if (false == _player_data.m_ip_from_vt) {
             _player_data.m_ip_address = external_ip;
         }
 
-        _player_data.m_username.swap(username);
+        _player_data.m_username = std::move(username);
         _player_data.m_last_seen = received_timestamp;
 
         players[index].m_included = true;
@@ -438,8 +438,8 @@ void redraw_players() {
 
     std::cout << "Host IP: " << party.m_host_ip_address.to_string() << std::endl << std::endl;
 
-    uint64_t timestamp = epoch_timestamp_milliseconds();
-    uint64_t latest_last_seen = timestamp - PLAYER_TIMEOUT_MILLISECONDS;
+    const uint64_t timestamp = epoch_timestamp_milliseconds();
+    const uint64_t latest_last_seen = timestamp - PLAYER_TIMEOUT_MILLISECONDS;
 
     for (size_t i = 0; i < MAX_PLAYER_COUNT; i++) {
         const player_wrapper_t & player_wrapper = players[i];
