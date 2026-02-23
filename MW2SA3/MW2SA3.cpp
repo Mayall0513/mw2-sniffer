@@ -64,12 +64,20 @@ int main() {
     while (-1 == parsed_input_index);
 
     pcap_if_t * selected_device = all_devices;
-    for (int i = 0; i < parsed_input_index; i++) {
+    for (int i = 0; i < parsed_input_index && nullptr != selected_device; i++) {
         selected_device = selected_device->next;
     }
 
-    pcap_addr_t * selected_device_addresses = selected_device->addresses;
-    for (; selected_device_addresses != nullptr; selected_device_addresses = selected_device_addresses->next) {
+    if (nullptr == selected_device) {
+        std::cerr << "Error when selecting device" << std::endl;
+        return -3;
+    }
+
+    for (pcap_addr_t * selected_device_addresses = selected_device->addresses; nullptr != selected_device_addresses; selected_device_addresses = selected_device_addresses->next) {
+        if (nullptr == selected_device_addresses->addr) {
+            continue;
+        }
+        
         if (AF_INET != selected_device_addresses->addr->sa_family) {
             continue;
         }
@@ -84,14 +92,14 @@ int main() {
 
     if (nullptr == device_handle) {
         std::cerr << error_buffer << std::endl;
-        return -3;
+        return -4;
     }
 
     bpf_program filter;
     int compile_result = pcap_compile(device_handle, &filter, "udp port 28960", 1, 0);
     if (-1 == compile_result) {
         std::cerr << pcap_geterr(device_handle) << std::endl;
-        return -4;
+        return -5;
     }
 
     int filter_result = pcap_setfilter(device_handle, &filter);
@@ -99,7 +107,7 @@ int main() {
 
     if (-1 == filter_result) {
         std::cerr << pcap_geterr(device_handle) << std::endl;
-        return -5;
+        return -6;
     }
 
     // set code page to match the one in MW2's English releases
@@ -114,7 +122,7 @@ int main() {
 
     if (0 != loop_result) {
         std::cerr << pcap_geterr(device_handle) << std::endl;
-        return -6;
+        return -7;
     }
 
     return 0;
