@@ -331,7 +331,7 @@ void packet_handler([[maybe_unused]] u_char * user, [[maybe_unused]] const struc
 }
 
 void handle_vt_packet(const ipv4_header_t * ip_header, packet_parser & packet_parser) {
-    std::lock_guard<std::mutex> scope_lock(party_players_mutex);
+    const std::lock_guard<std::mutex> scope_lock(party_players_mutex);
 
     const uint64_t received_timestamp = epoch_timestamp_milliseconds();
     packet_parser.skip_bytes(1);
